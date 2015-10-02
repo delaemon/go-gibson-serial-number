@@ -193,21 +193,9 @@ func isReguler(serialNumber string) bool {
 }
 
 func isCustomShop(serialNumber string) bool {
-	// length 6, head CS, since 1992
-	yy := string(serialNumber[0])
-	y := string(serialNumber[4])
-	yyyy := "19"
-	if yy == "0" {
-		yyyy = "20"
-	}
-	year := fmt.Sprintf("%s%s%s", yyyy, yy, y)
-	yi, err := strconv.Atoi(year)
-	if err != nil {
-		fmt.Println(err)
-	}
-
+	// CSYRRRR
 	head := fmt.Sprintf("%s%s", string(serialNumber[0]), string(serialNumber[1]))
-	if head == "CS" && len(serialNumber) == 6 && 1992 <= yi {
+	if head == "CS" && len(serialNumber) == 7 {
 		return true
 	}
 	return false
