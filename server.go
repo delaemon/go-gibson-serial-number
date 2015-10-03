@@ -37,7 +37,35 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if isCustomShop(serialNumber) {
+	var out string
+	if isCentennialYear(serialNumber) {
+		// Gibson's Centennial year
+		ppp := fmt.Sprintf("%s%s%s",
+				string(serialNumber[2]),
+				string(serialNumber[3]),
+				string(serialNumber[4]),
+				string(serialNumber[5]),
+				string(serialNumber[6]),
+				string(serialNumber[7]))
+		pi, err := strconv.Atoi(ppp)
+		if err != nil {
+			fmt.Println(err)
+		}
+		var p string
+		if pi == 1 {
+			p = "1st"
+		} else if pi == 2 {
+			p = "2nd"
+		} else if pi == 3 {
+			p = "3rd"
+		} else {
+			p = fmt.Sprintf("%dth", pi)
+		}
+		out = fmt.Sprintf("SerialNumber: %s\n"+
+			"Date: 1994 (In 1994, Gibson's Centennial year) \n"+
+			"Instrument Rank: %d",
+			serialNumber, p)
+	} else if isCustomShop(serialNumber) {
 		// custom shop
 	} else if isEsSeries(serialNumber) {
 		// ES (Electric Spanish)
@@ -58,11 +86,6 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			yyyy = "20"
 		}
 		year := fmt.Sprintf("%s%s%s", yyyy, yy, y)
-
-		// Todo 1994 specific
-		if year == "1994" {
-			// :-)
-		}
 
 		// DDD
 		yi, err := strconv.Atoi(year)
@@ -139,19 +162,19 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			factory = "Nashville"
 		}
 
-		out := fmt.Sprintf("SerialNumber: %s\n"+
+		out = fmt.Sprintf("SerialNumber: %s\n"+
 			"Date: %d.%d.%d\n"+
 			"Factory: %s\n"+
 			"The %s instrument stamped that day.\n"+
 			"Shapes: %s\n",
 			serialNumber, date.Year(), date.Month(), date.Day(), factory, p, shapes)
-
-		n := time.Now()
-		fmt.Printf("[AccessLog] %d-%02d-%02d %02d:%02d:%02d\n",
-			n.Year(), n.Month(), n.Day(), n.Hour(), n.Minute(), n.Second())
-		fmt.Println(out)
-		fmt.Fprintf(w, "%s", out)
 	}
+
+	n := time.Now()
+	fmt.Printf("[AccessLog] %d-%02d-%02d %02d:%02d:%02d\n",
+		n.Year(), n.Month(), n.Day(), n.Hour(), n.Minute(), n.Second())
+	fmt.Println(out)
+	fmt.Fprintf(w, "%s", out)
 }
 
 func isReguler(serialNumber string) bool {
@@ -192,6 +215,15 @@ func isReguler(serialNumber string) bool {
 	return false
 }
 
+func isCentennialYear(serialNumber string) bool {
+	// 94RRRRRR
+	head := fmt.Sprintf("%s%s", string(serialNumber[0]), string(serialNumber[1]))
+	if head == "94" && len(serialNumber) == 8 {
+		return true
+	}
+	return false
+}
+
 func isCustomShop(serialNumber string) bool {
 	// CSYRRRR
 	head := fmt.Sprintf("%s%s", string(serialNumber[0]), string(serialNumber[1]))
@@ -225,3 +257,4 @@ func Server() {
 	http.HandleFunc("/", handler)
 	http.ListenAndServe(":8080", nil)
 }
+
