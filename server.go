@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strconv"
 	"time"
+	"regexp"
 )
 
 func main () {
@@ -69,6 +70,8 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		// custom shop
 	} else if isEsSeries(serialNumber) {
 		// ES (Electric Spanish)
+	} else if isLesPaulClassic(serialNumber) {
+		// Les Paul Classic
 	} else {
 		// regular
 		// 1977 ~ 2005.07 = YDDDYPPP
@@ -242,6 +245,24 @@ func isEsSeries(serialNumber string) bool {
 	return false
 }
 
+func isLesPaulClassic(serialNumber string) bool {
+	var match string
+
+	upTo1999 := regexp.MustCompile("^\\d{1}\\s{1}\\d{3,4}")
+	match = upTo1999.FindString(serialNumber)
+	if len(match) > 0 {
+		return true
+	}
+
+	since2000 := regexp.MustCompile("^\\d{6}")
+	match = since2000.FindString(serialNumber)
+	if len(match) > 0 {
+		return true
+	}
+
+	return false
+}
+
 func validSerialNumber(serialNumber string) bool{
 	if isCustomShop(serialNumber) {
 		return true
@@ -257,4 +278,5 @@ func Server() {
 	http.HandleFunc("/", handler)
 	http.ListenAndServe(":8080", nil)
 }
+
 
