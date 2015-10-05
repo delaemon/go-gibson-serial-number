@@ -19,7 +19,6 @@ type RequestParams struct {
 func handler(w http.ResponseWriter, req *http.Request) {
 	var serialNumber string
 
-	// Parse
 	if req.Method == "POST" {
 		decorder := json.NewDecoder(req.Body)
 		var rp RequestParams
@@ -40,7 +39,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 
 	var out string
 	if isCentennialYear(serialNumber) {
-		// Gibson's Centennial year
+		// 1994 Gibson's Centennial year
 		ppp := fmt.Sprintf("%s%s%s",
 				string(serialNumber[2]),
 				string(serialNumber[3]),
@@ -66,8 +65,12 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			"Date: 1994 (In 1994, Gibson's Centennial year) \n"+
 			"Instrument Rank: %d",
 			serialNumber, p)
-	} else if isCustomShop(serialNumber) {
+	} else if isCustomShopRegular(serialNumber) {
 		// custom shop
+	} else if isCustomShopReissues50s(serialNumber) {
+		// custom shop reissues50s
+	} else if isCustomShopReissues60s(serialNumber) {
+		// custom shop reissues60s
 	} else if isEsSeries(serialNumber) {
 		// ES (Electric Spanish)
 	} else if isLesPaulClassic(serialNumber) {
@@ -227,7 +230,61 @@ func isCentennialYear(serialNumber string) bool {
 	return false
 }
 
-func isCustomShop(serialNumber string) bool {
+func isCustomShopReissues50s(serialNumber string) bool {
+	// 1952-1960 Les Paul, Explorer, Flying V, and Futura reissues (since late 1992):
+	// M YRRR or MYRRRR
+	// M is the model year being reissued
+	yy := string(serialNumber[0])
+	y := string(serialNumber[1])
+	yyyy := "19"
+	if yy == "0" {
+		yyyy = "20"
+	}
+	year := fmt.Sprintf("%s%s%s", yyyy, yy, y)
+	yi, err := strconv.Atoi(year)
+	if err != nil {
+		fmt.Println(err)
+	}
+	if yi < 1992 {
+		return false
+	}
+	var re *regexp.Regexp
+	re = regexp.MustCompile("^\\d{1}\\s{1}\\d{4}")
+	if len(re.FindString(serialNumber)) > 0 {
+		return true
+	}
+	re = regexp.MustCompile("^\\d{6}")
+	if len(re.FindString(serialNumber)) > 0 {
+		return true
+	}
+	return false
+}
+
+func isCustomShopReissues60s(serialNumber string) bool {
+	// 1961-1969 Firebird, Les Paul, and SG reissues (since 1997):
+	// YYRRRM
+	yy := string(serialNumber[0])
+	y := string(serialNumber[1])
+	yyyy := "19"
+	if yy == "0" {
+		yyyy = "20"
+	}
+	year := fmt.Sprintf("%s%s%s", yyyy, yy, y)
+	yi, err := strconv.Atoi(year)
+	if err != nil {
+		fmt.Println(err)
+	}
+	if yi < 1997 {
+		return false
+	}
+	re := regexp.MustCompile("^\\d{6}")
+	if len(re.FindString(serialNumber)) > 0 {
+		return true
+	}
+	return false
+}
+
+func isCustomShopRegular(serialNumber string) bool {
 	// CSYRRRR
 	head := fmt.Sprintf("%s%s", string(serialNumber[0]), string(serialNumber[1]))
 	if head == "CS" && len(serialNumber) == 7 {
@@ -264,7 +321,13 @@ func isLesPaulClassic(serialNumber string) bool {
 }
 
 func validSerialNumber(serialNumber string) bool{
-	if isCustomShop(serialNumber) {
+	if isLesPaulClassic (serialNumber) {
+		return true
+	} else if isCustomShopReissues50s (serialNumber) {
+		return true
+	} else if isCustomShopReissues60s (serialNumber) {
+		return true
+	} else if isCustomShopRegular(serialNumber) {
 		return true
 	} else if isEsSeries(serialNumber) {
 		return true
