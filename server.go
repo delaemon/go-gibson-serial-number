@@ -71,19 +71,13 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		// custom shop reissues50s
 	} else if isCustomShopReissues60s(serialNumber) {
 		// custom shop reissues60s
+	} else if isCustomShopCarvedTop(serialNumber) {
+		// custom shop carved top
 	} else if isEsSeries(serialNumber) {
 		// ES (Electric Spanish)
 	} else if isLesPaulClassic(serialNumber) {
 		// Les Paul Classic
 	} else {
-		// regular
-		// 1977 ~ 2005.07 = YDDDYPPP
-		//   YY is the production year
-		//   DDD is the day of the year
-		//   PPP is the plant designation and/or instrument rank
-		// 2005.07 ~ now = YDDDYBPPP
-		//   B is the batch number
-
 		// YY
 		yy := string(serialNumber[0])
 		y := string(serialNumber[4])
@@ -184,9 +178,15 @@ func handler(w http.ResponseWriter, req *http.Request) {
 }
 
 func isReguler(serialNumber string) bool {
-	// length 8, 1977 - 2005.06
-	// or
-	// length 9, 2005.07 ~
+	// 1977 ~ 2005.07
+	// YDDDYPPP
+	//   YY is the production year
+	//   DDD is the day of the year
+	//   PPP is the plant designation and/or instrument rank
+	// 2005.07 ~ now
+	// YDDDYBPPP
+	//   B is the batch number
+
 	yy := string(serialNumber[0])
 	y := string(serialNumber[4])
 	yyyy := "19"
@@ -198,8 +198,8 @@ func isReguler(serialNumber string) bool {
 	if err != nil {
 		fmt.Println(err)
 	}
-	if 1977 <= yi && yi < 2005 && len(serialNumber) > 8 {
-
+	if 1977 <= yi && yi < 2005 && len(serialNumber) == 8 {
+		return true
 	}
 	if 2005 <= yi {
 		date := time.Date(yi, time.Month(1), 1, 0, 0, 0, 0, time.Local)
@@ -293,6 +293,14 @@ func isCustomShopRegular(serialNumber string) bool {
 	return false
 }
 
+func isCustomShopCarvedTop(serialNumber string) bool {
+	//YDDDYRRR
+	if len(serialNumber) == 8{
+		return true
+	}
+	return false
+}
+
 func isEsSeries(serialNumber string) bool {
 	// length 6, head A or B
 	head := fmt.Sprintf("%s%s", string(serialNumber[0]), string(serialNumber[1]))
@@ -326,6 +334,8 @@ func validSerialNumber(serialNumber string) bool{
 	} else if isCustomShopReissues50s (serialNumber) {
 		return true
 	} else if isCustomShopReissues60s (serialNumber) {
+		return true
+	} else if isCustomShopCarvedTop (serialNumber) {
 		return true
 	} else if isCustomShopRegular(serialNumber) {
 		return true
