@@ -66,7 +66,29 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			"Instrument Rank: %d",
 			serialNumber, p)
 	} else if isCustomShopRegular(serialNumber) {
+		fmt.Println("custom")
 		// custom shop
+		// CSYRRRR
+		var p string
+		ppp := string(serialNumber[3:])
+		pi, err := strconv.Atoi(ppp)
+		if err != nil {
+			fmt.Println(err)
+		}
+		if pi == 1 {
+			p = "1st"
+		} else if pi == 2 {
+			p = "2nd"
+		} else if pi == 3 {
+			p = "3rd"
+		} else {
+			p = fmt.Sprintf("%dth", pi)
+		}
+		out = fmt.Sprintf("SerialNumber: %s\n"+
+			"Year: 200%s\n"+
+			"%s built that year.\n"+
+			"CUSTOM SHOP Regular production.",
+			serialNumber, string(serialNumber[2]), p)
 	} else if isCustomShopReissues50s(serialNumber) {
 		// custom shop reissues50s
 	} else if isCustomShopReissues60s(serialNumber) {
@@ -78,6 +100,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 	} else if isLesPaulClassic(serialNumber) {
 		// Les Paul Classic
 	} else {
+		fmt.Println("regular")
 		// YY
 		yy := string(serialNumber[0])
 		y := string(serialNumber[4])
