@@ -67,7 +67,6 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			serialNumber, p)
 	} else if isCustomShopRegular(serialNumber) {
 		fmt.Println("custom")
-		// custom shop
 		// CSYRRRR
 		var p string
 		ppp := string(serialNumber[3:])
@@ -90,9 +89,71 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			"CUSTOM SHOP Regular production.",
 			serialNumber, string(serialNumber[2]), p)
 	} else if isCustomShopReissues50s(serialNumber) {
-		// custom shop reissues50s
+		// 1952-1960 Les Paul, Explorer, Flying V, and Futura reissues (since late 1992):
+		// M YRRR or MYRRRR
+		// M is the model year being reissued
+		y := serialNumber[1]
+		k := 2
+		if string(serialNumber[1]) == " " {
+			k = 3
+			y = serialNumber[2]
+		}
+		year := fmt.Sprintf("200%s", y)
+		var p string
+		ppp := string(serialNumber[k:])
+		pi, err := strconv.Atoi(ppp)
+		if err != nil {
+			fmt.Println(err)
+		}
+		if pi == 1 {
+			p = "1st"
+		} else if pi == 2 {
+			p = "2nd"
+		} else if pi == 3 {
+			p = "3rd"
+		} else {
+			p = fmt.Sprintf("%dth", pi)
+		}
+		out = fmt.Sprintf("SerialNumber: %s\n"+
+			"Year: %s\n"+
+			"%s built that year.\n"+
+			"195%s reissue model\n" +
+			"CUSTOM SHOP Reissues 50's.\n"+
+			"Les Paul, Explorer, Flying V, and Futura reissues.",
+			serialNumber, year, serialNumber[0], p)
 	} else if isCustomShopReissues60s(serialNumber) {
 		// custom shop reissues60s
+		// 1961-1969 Firebird, Les Paul, and SG reissues (since 1997):
+		// YYRRRM
+		yy := string(serialNumber[0])
+		y := string(serialNumber[1])
+		yyyy := "19"
+		if yy == "0" {
+			yyyy = "20"
+		}
+		year := fmt.Sprintf("%s%s%s", yyyy, yy, y)
+		var p string
+		ppp := string(serialNumber[2:5])
+		pi, err := strconv.Atoi(ppp)
+		if err != nil {
+			fmt.Println(err)
+		}
+		if pi == 1 {
+			p = "1st"
+		} else if pi == 2 {
+			p = "2nd"
+		} else if pi == 3 {
+			p = "3rd"
+		} else {
+			p = fmt.Sprintf("%dth", pi)
+		}
+		out = fmt.Sprintf("SerialNumber: %s\n"+
+		"Year: %s\n"+
+		"%s built that year.\n"+
+		"196%s reissue model\n" +
+		"CUSTOM SHOP Reissues 60's.\n"+
+		"Firebird, Les Paul, and SG reissues.",
+		serialNumber, year, serialNumber[len(serialNumber)-1], p)
 	} else if isCustomShopCarvedTop(serialNumber) {
 		// custom shop carved top
 	} else if isEsSeries(serialNumber) {
@@ -257,13 +318,11 @@ func isCustomShopReissues50s(serialNumber string) bool {
 	// 1952-1960 Les Paul, Explorer, Flying V, and Futura reissues (since late 1992):
 	// M YRRR or MYRRRR
 	// M is the model year being reissued
-	yy := string(serialNumber[0])
 	y := string(serialNumber[1])
-	yyyy := "19"
-	if yy == "0" {
-		yyyy = "20"
+	if y == " " {
+		y = string(serialNumber[2])
 	}
-	year := fmt.Sprintf("%s%s%s", yyyy, yy, y)
+	year := fmt.Sprintf("200%s", y) // todo
 	yi, err := strconv.Atoi(year)
 	if err != nil {
 		fmt.Println(err)
