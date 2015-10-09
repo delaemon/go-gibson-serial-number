@@ -148,20 +148,144 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			p = fmt.Sprintf("%dth", pi)
 		}
 		out = fmt.Sprintf("SerialNumber: %s\n"+
-		"Year: %s\n"+
-		"%s built that year.\n"+
-		"196%s reissue model\n" +
-		"CUSTOM SHOP Reissues 60's.\n"+
-		"Firebird, Les Paul, and SG reissues.",
-		serialNumber, year, serialNumber[len(serialNumber)-1], p)
+			"Year: %s\n"+
+			"%s built that year.\n"+
+			"196%s reissue model\n" +
+			"CUSTOM SHOP Reissues 60's.\n"+
+			"Firebird, Les Paul, and SG reissues.",
+			serialNumber, year, serialNumber[len(serialNumber)-1], p)
 	} else if isCustomShopCarvedTop(serialNumber) {
-		// custom shop carved top
+		// YDDDYRRR
+		yy := string(serialNumber[0])
+		y := string(serialNumber[4])
+		yyyy := "19"
+		if yy == "0" {
+			yyyy = "20"
+		}
+		year := fmt.Sprintf("%s%s%s", yyyy, yy, y)
+
+		// DDD
+		yi, err := strconv.Atoi(year)
+		if err != nil {
+			fmt.Println(err)
+		}
+		date := time.Date(yi, time.Month(1), 1, 0, 0, 0, 0, time.Local)
+		ddd := fmt.Sprintf("%s%s%s",
+			string(serialNumber[1]),
+			string(serialNumber[2]),
+			string(serialNumber[3]))
+		di, err := strconv.Atoi(ddd)
+		if err != nil {
+			fmt.Println(err)
+		}
+		date = date.AddDate(0, 0, di - 1)
+
+		// PPP
+		pi := string(serialNumber[5:8])
+		var p string
+		if pi == "1" {
+			p = "1st"
+		} else if pi == "2" {
+			p = "2nd"
+		} else if pi == "3" {
+			p = "3rd"
+		} else {
+			p = fmt.Sprintf("%dth", pi)
+		}
+
+		out = fmt.Sprintf("SerialNumber: %s\n"+
+			"Date: %d.%d.%d\n"+
+			"The %s instrument stamped that day.\n"+
+			"CUSTOM SHOP Carved top %s\n",
+			serialNumber, date.Year(), date.Month(), date.Day(),  p)
 	} else if isEsSeries(serialNumber) {
-		// ES (Electric Spanish)
+		/*
+		ES (Electric Spanish)
+		(A or B)-MYRRR
+		M is the model year being reissued
+		Y is the production year
+		RRR indicates the guitar's place in the sequence of Historic ES production for that year.
+		Reissue model codes:
+		2= ES-295
+		3= 1963 ES-335 (block inlays)
+		4= ES-330
+		5= ES-345
+		9 with an "A" prefix = 1959 ES-335 (dot inlays)
+		9 with a "B" prefix= ES-355
+		*/
+		year := fmt.Sprintf("200%", string(serialNumber[3]))
+		pi := string(serialNumber[4:])
+		var p string
+		if pi == "1" {
+			p = "1st"
+		} else if pi == "2" {
+			p = "2nd"
+		} else if pi == "3" {
+			p = "3rd"
+		} else {
+			p = fmt.Sprintf("%dth", pi)
+		}
+		var model string
+		m := string(serialNumber[2])
+		if (m == "2") {
+			model = "ES-295"
+		} else if (m == "3") {
+			model = "1963 ES-335 (block inlays)"
+		} else if (m == "4") {
+			model = "ES-330"
+		} else if (m == "5") {
+			model = "ES-345"
+		} else if (m == "9") {
+			h := string(serialNumber[0])
+			if (h == "A") {
+				model = "1959 ES-335 (dot inlays)"
+			} else if (h == "B") {
+				model = "ES-355"
+			}
+		}
+		out = fmt.Sprintf("SerialNumber: %s\n"+
+			"Year: %s\n"+
+			"%s built that year.\n"+
+			"CUSTOM SHOP %s Reissues.\n",
+			serialNumber, year, p, model)
+
 	} else if isLesPaulClassic(serialNumber) {
 		// Les Paul Classic
+		l := len(serialNumber)
+		var y string
+		if string(serialNumber[1]) == " " {
+			y = string(serialNumber[0])
+		} else {
+			y = string(serialNumber[0:2])
+		}
+
+		var year string
+		if l == 4 && y == "9" {
+			year = "1989"
+		} else if l == 5 && len(y) == 1 {
+			year = "199" +  y
+		} else if l == 6 && len(y) == 2 {
+			year = "20" +  y
+		}
+
+		pi := string(serialNumber[2:])
+		var p string
+		if pi == "1" {
+			p = "1st"
+		} else if pi == "2" {
+			p = "2nd"
+		} else if pi == "3" {
+			p = "3rd"
+		} else {
+			p = fmt.Sprintf("%dth", pi)
+		}
+
+		out = fmt.Sprintf("SerialNumber: %s\n"+
+			"Year: %s\n"+
+			"%s built that year.\n"+
+			"CUSTOM SHOP %s Reissues.\n",
+			serialNumber, year, p)
 	} else {
-		fmt.Println("regular")
 		// YY
 		yy := string(serialNumber[0])
 		y := string(serialNumber[4])
@@ -376,7 +500,7 @@ func isCustomShopRegular(serialNumber string) bool {
 }
 
 func isCustomShopCarvedTop(serialNumber string) bool {
-	//YDDDYRRR
+	// YDDDYRRR
 	if len(serialNumber) == 8{
 		return true
 	}
@@ -384,9 +508,9 @@ func isCustomShopCarvedTop(serialNumber string) bool {
 }
 
 func isEsSeries(serialNumber string) bool {
-	// length 6, head A or B
-	head := fmt.Sprintf("%s%s", string(serialNumber[0]), string(serialNumber[1]))
-	if (head == "A" || head == "B") && len(serialNumber) == 6 {
+	// (A or B)-MYRRR
+	head := fmt.Sprintf("%s-", string(serialNumber[0]))
+	if (head == "A-" || head == "B-") && len(serialNumber) == 7 {
 		return true
 	}
 	return false
