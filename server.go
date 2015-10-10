@@ -40,6 +40,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 	var out string
 	if isCentennialYear(serialNumber) {
 		// 1994 Gibson's Centennial year
+		// 94RRRRRR
 		ppp := fmt.Sprintf("%s%s%s",
 				string(serialNumber[2]),
 				string(serialNumber[3]),
@@ -285,7 +286,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			"%s built that year.\n"+
 			"CUSTOM SHOP %s Reissues.\n",
 			serialNumber, year, p)
-	} else {
+	} else if isReguler(serialNumber) {
 		// YY
 		yy := string(serialNumber[0])
 		y := string(serialNumber[4])
@@ -376,6 +377,8 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			"The %s instrument stamped that day.\n"+
 			"Shapes: %s\n",
 			serialNumber, date.Year(), date.Month(), date.Day(), factory, p, shapes)
+	} else {
+		return
 	}
 
 	n := time.Now()
@@ -394,6 +397,11 @@ func isReguler(serialNumber string) bool {
 	// 2005.07 ~ now
 	// YDDDYBPPP
 	//   B is the batch number
+	var re *regexp.Regexp
+	re = regexp.MustCompile("^\\d{8,9}$")
+	if !re.MatchString(serialNumber) {
+		return false
+	}
 
 	yy := string(serialNumber[0])
 	y := string(serialNumber[4])
@@ -431,6 +439,11 @@ func isReguler(serialNumber string) bool {
 
 func isCentennialYear(serialNumber string) bool {
 	// 94RRRRRR
+	re := regexp.MustCompile("^94\\d{6}$")
+	if !re.MatchString(serialNumber) {
+		return false
+	}
+
 	head := fmt.Sprintf("%s%s", string(serialNumber[0]), string(serialNumber[1]))
 	if head == "94" && len(serialNumber) == 8 {
 		return true
@@ -442,6 +455,12 @@ func isCustomShopReissues50s(serialNumber string) bool {
 	// 1952-1960 Les Paul, Explorer, Flying V, and Futura reissues (since late 1992):
 	// M YRRR or MYRRRR
 	// M is the model year being reissued
+	re1 := regexp.MustCompile("^\\d{1}\\s{1}\\d{4}$")
+	re2 := regexp.MustCompile("^\\d{6}$")
+	if !re1.MatchString(serialNumber) && !re2.MatchString(serialNumber) {
+		return false
+	}
+
 	y := string(serialNumber[1])
 	if y == " " {
 		y = string(serialNumber[2])
@@ -451,16 +470,7 @@ func isCustomShopReissues50s(serialNumber string) bool {
 	if err != nil {
 		fmt.Println(err)
 	}
-	if yi < 1992 {
-		return false
-	}
-	var re *regexp.Regexp
-	re = regexp.MustCompile("^\\d{1}\\s{1}\\d{4}")
-	if len(re.FindString(serialNumber)) > 0 {
-		return true
-	}
-	re = regexp.MustCompile("^\\d{6}")
-	if len(re.FindString(serialNumber)) > 0 {
+	if 1992 <= yi {
 		return true
 	}
 	return false
@@ -469,6 +479,11 @@ func isCustomShopReissues50s(serialNumber string) bool {
 func isCustomShopReissues60s(serialNumber string) bool {
 	// 1961-1969 Firebird, Les Paul, and SG reissues (since 1997):
 	// YYRRRM
+	re := regexp.MustCompile("^\\d{6}$")
+	if !re.MatchString(serialNumber) {
+		return false
+	}
+
 	yy := string(serialNumber[0])
 	y := string(serialNumber[1])
 	yyyy := "19"
@@ -480,11 +495,7 @@ func isCustomShopReissues60s(serialNumber string) bool {
 	if err != nil {
 		fmt.Println(err)
 	}
-	if yi < 1997 {
-		return false
-	}
-	re := regexp.MustCompile("^\\d{6}")
-	if len(re.FindString(serialNumber)) > 0 {
+	if 1997 <= yi {
 		return true
 	}
 	return false
@@ -492,8 +503,8 @@ func isCustomShopReissues60s(serialNumber string) bool {
 
 func isCustomShopRegular(serialNumber string) bool {
 	// CSYRRRR
-	head := fmt.Sprintf("%s%s", string(serialNumber[0]), string(serialNumber[1]))
-	if head == "CS" && len(serialNumber) == 7 {
+	re := regexp.MustCompile("^CS\\d{5}$")
+	if re.MatchString(serialNumber) {
 		return true
 	}
 	return false
@@ -501,7 +512,8 @@ func isCustomShopRegular(serialNumber string) bool {
 
 func isCustomShopCarvedTop(serialNumber string) bool {
 	// YDDDYRRR
-	if len(serialNumber) == 8{
+	re := regexp.MustCompile("^\\d{8}$")
+	if re.MatchString(serialNumber) {
 		return true
 	}
 	return false
@@ -509,25 +521,21 @@ func isCustomShopCarvedTop(serialNumber string) bool {
 
 func isEsSeries(serialNumber string) bool {
 	// (A or B)-MYRRR
-	head := fmt.Sprintf("%s-", string(serialNumber[0]))
-	if (head == "A-" || head == "B-") && len(serialNumber) == 7 {
+	re := regexp.MustCompile("^[A|B]-\\d{5}$")
+	if re.MatchString(serialNumber) {
 		return true
 	}
 	return false
 }
 
 func isLesPaulClassic(serialNumber string) bool {
-	var match string
-
 	upTo1999 := regexp.MustCompile("^\\d{1}\\s{1}\\d{3,4}")
-	match = upTo1999.FindString(serialNumber)
-	if len(match) > 0 {
+	if upTo1999.MatchString(serialNumber) {
 		return true
 	}
 
 	since2000 := regexp.MustCompile("^\\d{6}")
-	match = since2000.FindString(serialNumber)
-	if len(match) > 0 {
+	if since2000.MatchString(serialNumber) {
 		return true
 	}
 
