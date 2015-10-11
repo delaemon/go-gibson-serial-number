@@ -6,11 +6,15 @@ import (
 	"strconv"
 	"time"
 	"regexp"
+	"os"
+	"log"
+	"bytes"
+	"html/template"
 )
 
-func main () {
-	Server()
-}
+var (
+	AccessTime time.Time = time.Now()
+)
 
 type RequestParams struct {
 	SerialNumber string
@@ -381,11 +385,19 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	n := time.Now()
-	fmt.Printf("[AccessLog] %d-%02d-%02d %02d:%02d:%02d\n",
-		n.Year(), n.Month(), n.Day(), n.Hour(), n.Minute(), n.Second())
-	fmt.Println(out)
 	fmt.Fprintf(w, "%s", out)
+
+	logFile := fmt.Sprintf("./log/app/%d%d%d.log", AccessTime.Year(), AccessTime.Month(), AccessTime.Day())
+	f, err := os.OpenFile(logFile, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+	if err != nil {
+		panic(err)
+	}
+	log.SetOutput(f)
+	log.Printf(out)
+
+	fmt.Printf("[AccessLog] %d-%02d-%02d %02d:%02d:%02d\n",
+		AccessTime.Year(), AccessTime.Month(), AccessTime.Day(), AccessTime.Hour(), AccessTime.Minute(), AccessTime.Second())
+	fmt.Println(out)
 }
 
 func isReguler(serialNumber string) bool {
@@ -561,9 +573,59 @@ func validSerialNumber(serialNumber string) bool{
 	return false
 }
 
+type LogLine struct {
+	RemoteAddr  string
+	ContentType string
+	Path        string
+	Query       string
+	Method      string
+	Body        string
+	UserAgent   string
+}
+
+var LogTemplate = `{{.RemoteAddr}} {{.ContentType}} {{.Method}} {{.Path}} {{.Query}} {{.Body}} {{.UserAgent}}`
+
+func Log(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		bufbody := new(bytes.Buffer)
+		bufbody.ReadFrom(req.Body)
+		body := bufbody.String()
+		line := LogLine {
+			req.RemoteAddr,
+			req.Header.Get("Content-Type"),
+			req.URL.Path,
+			req.URL.RawQuery,
+			req.Method, body, req.UserAgent(),
+		}
+		tmpl, err := template.New("line").Parse(LogTemplate)
+		if err != nil {
+			panic(err)
+		}
+		bufline := new(bytes.Buffer)
+		err = tmpl.Execute(bufline, line)
+		if err != nil {
+			panic(err)
+		}
+
+		logFile := fmt.Sprintf("./log/access/%d%d%d.log", AccessTime.Year(), AccessTime.Month(), AccessTime.Day())
+		f, err := os.OpenFile(logFile, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+		if err != nil {
+			panic(err)
+		}
+		log.SetOutput(f)
+		log.Printf(bufline.String())
+
+		handler.ServeHTTP(w, req)
+	})
+}
+
 func Server() {
 	http.HandleFunc("/", handler)
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":8080", Log(http.DefaultServeMux))
+}
+
+func main () {
+	Server()
 }
 
 
