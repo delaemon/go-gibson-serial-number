@@ -21,6 +21,13 @@ type RequestParams struct {
 }
 
 func handler(w http.ResponseWriter, req *http.Request) {
+	logFile := fmt.Sprintf("./log/app/%d%d%d.log", AccessTime.Year(), AccessTime.Month(), AccessTime.Day())
+	f, err := os.OpenFile(logFile, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+	if err != nil {
+		panic(err)
+	}
+	log.SetOutput(f)
+
 	var serialNumber string
 
 	if req.Method == "POST" {
@@ -28,7 +35,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		var rp RequestParams
 		err := decorder.Decode(&rp)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 		serialNumber = rp.SerialNumber
 	} else {
@@ -38,6 +45,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 
 	if !validSerialNumber(serialNumber) {
 		fmt.Fprintf(w, "invalid serial number.")
+		log.Printf("invalid serial number => %s\n", serialNumber)
 		return
 	}
 
@@ -45,49 +53,14 @@ func handler(w http.ResponseWriter, req *http.Request) {
 	if isCentennialYear(serialNumber) {
 		// 1994 Gibson's Centennial year
 		// 94RRRRRR
-		ppp := fmt.Sprintf("%s%s%s",
-				string(serialNumber[2]),
-				string(serialNumber[3]),
-				string(serialNumber[4]),
-				string(serialNumber[5]),
-				string(serialNumber[6]),
-				string(serialNumber[7]))
-		pi, err := strconv.Atoi(ppp)
-		if err != nil {
-			fmt.Println(err)
-		}
-		var p string
-		if pi == 1 {
-			p = "1st"
-		} else if pi == 2 {
-			p = "2nd"
-		} else if pi == 3 {
-			p = "3rd"
-		} else {
-			p = fmt.Sprintf("%dth", pi)
-		}
+		p := convertRankingNumberToText(string(serialNumber[2:7]))
 		out = fmt.Sprintf("SerialNumber: %s\n"+
 			"Date: 1994 (In 1994, Gibson's Centennial year) \n"+
 			"Instrument Rank: %d",
 			serialNumber, p)
 	} else if isCustomShopRegular(serialNumber) {
-		fmt.Println("custom")
 		// CSYRRRR
-		var p string
-		ppp := string(serialNumber[3:])
-		pi, err := strconv.Atoi(ppp)
-		if err != nil {
-			fmt.Println(err)
-		}
-		if pi == 1 {
-			p = "1st"
-		} else if pi == 2 {
-			p = "2nd"
-		} else if pi == 3 {
-			p = "3rd"
-		} else {
-			p = fmt.Sprintf("%dth", pi)
-		}
+		p := convertRankingNumberToText(string(serialNumber[3:]))
 		out = fmt.Sprintf("SerialNumber: %s\n"+
 			"Year: 200%s\n"+
 			"%s built that year.\n"+
@@ -104,21 +77,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			y = serialNumber[2]
 		}
 		year := fmt.Sprintf("200%s", y)
-		var p string
-		ppp := string(serialNumber[k:])
-		pi, err := strconv.Atoi(ppp)
-		if err != nil {
-			fmt.Println(err)
-		}
-		if pi == 1 {
-			p = "1st"
-		} else if pi == 2 {
-			p = "2nd"
-		} else if pi == 3 {
-			p = "3rd"
-		} else {
-			p = fmt.Sprintf("%dth", pi)
-		}
+		p := convertRankingNumberToText(string(serialNumber[k:]))
 		out = fmt.Sprintf("SerialNumber: %s\n"+
 			"Year: %s\n"+
 			"%s built that year.\n"+
@@ -137,21 +96,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			yyyy = "20"
 		}
 		year := fmt.Sprintf("%s%s%s", yyyy, yy, y)
-		var p string
-		ppp := string(serialNumber[2:5])
-		pi, err := strconv.Atoi(ppp)
-		if err != nil {
-			fmt.Println(err)
-		}
-		if pi == 1 {
-			p = "1st"
-		} else if pi == 2 {
-			p = "2nd"
-		} else if pi == 3 {
-			p = "3rd"
-		} else {
-			p = fmt.Sprintf("%dth", pi)
-		}
+		p := convertRankingNumberToText(string(serialNumber[2:5]))
 		out = fmt.Sprintf("SerialNumber: %s\n"+
 			"Year: %s\n"+
 			"%s built that year.\n"+
@@ -169,10 +114,9 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		}
 		year := fmt.Sprintf("%s%s%s", yyyy, yy, y)
 
-		// DDD
 		yi, err := strconv.Atoi(year)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 		date := time.Date(yi, time.Month(1), 1, 0, 0, 0, 0, time.Local)
 		ddd := fmt.Sprintf("%s%s%s",
@@ -181,28 +125,16 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			string(serialNumber[3]))
 		di, err := strconv.Atoi(ddd)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 		date = date.AddDate(0, 0, di - 1)
 
-		// PPP
-		pi := string(serialNumber[5:8])
-		var p string
-		if pi == "1" {
-			p = "1st"
-		} else if pi == "2" {
-			p = "2nd"
-		} else if pi == "3" {
-			p = "3rd"
-		} else {
-			p = fmt.Sprintf("%dth", pi)
-		}
-
+		r := convertRankingNumberToText(string(serialNumber[5:8]))
 		out = fmt.Sprintf("SerialNumber: %s\n"+
 			"Date: %d.%d.%d\n"+
 			"The %s instrument stamped that day.\n"+
 			"CUSTOM SHOP Carved top %s\n",
-			serialNumber, date.Year(), date.Month(), date.Day(),  p)
+			serialNumber, date.Year(), date.Month(), date.Day(),  r)
 	} else if isEsSeries(serialNumber) {
 		/*
 		ES (Electric Spanish)
@@ -219,17 +151,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		9 with a "B" prefix= ES-355
 		*/
 		year := fmt.Sprintf("200%", string(serialNumber[3]))
-		pi := string(serialNumber[4:])
-		var p string
-		if pi == "1" {
-			p = "1st"
-		} else if pi == "2" {
-			p = "2nd"
-		} else if pi == "3" {
-			p = "3rd"
-		} else {
-			p = fmt.Sprintf("%dth", pi)
-		}
+		r := convertRankingNumberToText(string(serialNumber[4:]))
 		var model string
 		m := string(serialNumber[2])
 		if (m == "2") {
@@ -252,7 +174,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			"Year: %s\n"+
 			"%s built that year.\n"+
 			"CUSTOM SHOP %s Reissues.\n",
-			serialNumber, year, p, model)
+			serialNumber, year, r, model)
 
 	} else if isLesPaulClassic(serialNumber) {
 		// Les Paul Classic
@@ -273,25 +195,13 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			year = "20" +  y
 		}
 
-		pi := string(serialNumber[2:])
-		var p string
-		if pi == "1" {
-			p = "1st"
-		} else if pi == "2" {
-			p = "2nd"
-		} else if pi == "3" {
-			p = "3rd"
-		} else {
-			p = fmt.Sprintf("%dth", pi)
-		}
-
+		r := convertRankingNumberToText(string(serialNumber[2:]))
 		out = fmt.Sprintf("SerialNumber: %s\n"+
 			"Year: %s\n"+
 			"%s built that year.\n"+
 			"CUSTOM SHOP %s Reissues.\n",
-			serialNumber, year, p)
+			serialNumber, year, r)
 	} else if isReguler(serialNumber) {
-		// YY
 		yy := string(serialNumber[0])
 		y := string(serialNumber[4])
 		yyyy := "19"
@@ -300,10 +210,9 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		}
 		year := fmt.Sprintf("%s%s%s", yyyy, yy, y)
 
-		// DDD
 		yi, err := strconv.Atoi(year)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 		date := time.Date(yi, time.Month(1), 1, 0, 0, 0, 0, time.Local)
 		ddd := fmt.Sprintf("%s%s%s",
@@ -312,7 +221,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			string(serialNumber[3]))
 		di, err := strconv.Atoi(ddd)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 		date = date.AddDate(0, 0, di - 1)
 
@@ -331,19 +240,11 @@ func handler(w http.ResponseWriter, req *http.Request) {
 				string(serialNumber[6]),
 				string(serialNumber[7]))
 		}
+
+		p := convertRankingNumberToText(ppp)
 		pi, err := strconv.Atoi(ppp)
 		if err != nil {
-			fmt.Println(err)
-		}
-		var p string
-		if pi == 1 {
-			p = "1st"
-		} else if pi == 2 {
-			p = "2nd"
-		} else if pi == 3 {
-			p = "3rd"
-		} else {
-			p = fmt.Sprintf("%dth", pi)
+			log.Println(err)
 		}
 
 		// shapes
@@ -387,17 +288,29 @@ func handler(w http.ResponseWriter, req *http.Request) {
 
 	fmt.Fprintf(w, "%s", out)
 
-	logFile := fmt.Sprintf("./log/app/%d%d%d.log", AccessTime.Year(), AccessTime.Month(), AccessTime.Day())
-	f, err := os.OpenFile(logFile, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
-	if err != nil {
-		panic(err)
-	}
-	log.SetOutput(f)
 	log.Printf(out)
 
 	fmt.Printf("[AccessLog] %d-%02d-%02d %02d:%02d:%02d\n",
 		AccessTime.Year(), AccessTime.Month(), AccessTime.Day(), AccessTime.Hour(), AccessTime.Minute(), AccessTime.Second())
 	fmt.Println(out)
+}
+
+func convertRankingNumberToText (rrr string) string {
+	ri, err := strconv.Atoi(rrr)
+	if err != nil {
+		log.Println(err)
+	}
+	var r string
+	if ri == 1 {
+		r = "1st"
+	} else if ri == 2 {
+		r = "2nd"
+	} else if ri == 3 {
+		r = "3rd"
+	} else {
+		r = fmt.Sprintf("%dth", ri)
+	}
+	return r
 }
 
 func isReguler(serialNumber string) bool {
@@ -424,7 +337,7 @@ func isReguler(serialNumber string) bool {
 	year := fmt.Sprintf("%s%s%s", yyyy, yy, y)
 	yi, err := strconv.Atoi(year)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 	if 1977 <= yi && yi < 2005 && len(serialNumber) == 8 {
 		return true
@@ -437,7 +350,7 @@ func isReguler(serialNumber string) bool {
 			string(serialNumber[3]))
 		di, err := strconv.Atoi(ddd)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 		date = date.AddDate(0, 0, di - 1)
 		if date.Month() <= 6 && len(serialNumber) == 8 {
@@ -480,7 +393,7 @@ func isCustomShopReissues50s(serialNumber string) bool {
 	year := fmt.Sprintf("200%s", y) // todo
 	yi, err := strconv.Atoi(year)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 	if 1992 <= yi {
 		return true
@@ -505,7 +418,7 @@ func isCustomShopReissues60s(serialNumber string) bool {
 	year := fmt.Sprintf("%s%s%s", yyyy, yy, y)
 	yi, err := strconv.Atoi(year)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 	if 1997 <= yi {
 		return true
