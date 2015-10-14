@@ -20,6 +20,17 @@ type RequestParams struct {
 	SerialNumber string
 }
 
+type ResponseData struct {
+	Year  			string
+	Month 			string
+	Day   			string
+	Factory 		string
+	Model 			string
+	Shape 			string
+	RankingNumber	string
+	SerialNumber	string
+}
+
 func handler(w http.ResponseWriter, req *http.Request) {
 	logFile := fmt.Sprintf("./log/app/%d%d%d.log", AccessTime.Year(), AccessTime.Month(), AccessTime.Day())
 	f, err := os.OpenFile(logFile, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
@@ -86,7 +97,6 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			"Les Paul, Explorer, Flying V, and Futura reissues.",
 			serialNumber, year, serialNumber[0], p)
 	} else if isCustomShopReissues60s(serialNumber) {
-		// custom shop reissues60s
 		// 1961-1969 Firebird, Les Paul, and SG reissues (since 1997):
 		// YYRRRM
 		yy := string(serialNumber[0])
@@ -177,7 +187,6 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			serialNumber, year, r, model)
 
 	} else if isLesPaulClassic(serialNumber) {
-		// Les Paul Classic
 		l := len(serialNumber)
 		var y string
 		if string(serialNumber[1]) == " " {
@@ -225,7 +234,6 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		}
 		date = date.AddDate(0, 0, di - 1)
 
-		// PPP
 		var ppp string
 		if yi <= 2005 && date.Month() == 7 && len(serialNumber) == 9 {
 			ppp = fmt.Sprintf("%s%s%s",
@@ -247,7 +255,6 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			log.Println(err)
 		}
 
-		// shapes
 		var shapes string
 		if pi >= 700 {
 			shapes = "Flying V, T-Bird, Explorer, etc."
