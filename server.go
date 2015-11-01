@@ -1,15 +1,17 @@
 package main
+
 import (
-	"net/http"
-	"fmt"
+	"bytes"
 	"encoding/json"
+	"flag"
+	"fmt"
+	"html/template"
+	"log"
+	"net/http"
+	"os"
+	"regexp"
 	"strconv"
 	"time"
-	"regexp"
-	"os"
-	"log"
-	"bytes"
-	"html/template"
 )
 
 var (
@@ -21,19 +23,19 @@ type RequestParams struct {
 }
 
 type ResponseData struct {
-	Year  			string
-	Month 			string
-	Day   			string
-	Factory 		string
-	Model 			string
-	Shape 			string
-	RankingNumber	string
-	SerialNumber	string
+	Year          string
+	Month         string
+	Day           string
+	Factory       string
+	Model         string
+	Shape         string
+	RankingNumber string
+	SerialNumber  string
 }
 
 func handler(w http.ResponseWriter, req *http.Request) {
 	logFile := fmt.Sprintf("./log/app/%d%d%d.log", AccessTime.Year(), AccessTime.Month(), AccessTime.Day())
-	f, err := os.OpenFile(logFile, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+	f, err := os.OpenFile(logFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		panic(err)
 	}
@@ -92,7 +94,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		out = fmt.Sprintf("SerialNumber: %s\n"+
 			"Year: %s\n"+
 			"%s built that year.\n"+
-			"195%s reissue model\n" +
+			"195%s reissue model\n"+
 			"CUSTOM SHOP Reissues 50's.\n"+
 			"Les Paul, Explorer, Flying V, and Futura reissues.",
 			serialNumber, year, serialNumber[0], p)
@@ -110,7 +112,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		out = fmt.Sprintf("SerialNumber: %s\n"+
 			"Year: %s\n"+
 			"%s built that year.\n"+
-			"196%s reissue model\n" +
+			"196%s reissue model\n"+
 			"CUSTOM SHOP Reissues 60's.\n"+
 			"Firebird, Les Paul, and SG reissues.",
 			serialNumber, year, serialNumber[len(serialNumber)-1], p)
@@ -137,46 +139,46 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			log.Println(err)
 		}
-		date = date.AddDate(0, 0, di - 1)
+		date = date.AddDate(0, 0, di-1)
 
 		r := convertRankingNumberToText(string(serialNumber[5:8]))
 		out = fmt.Sprintf("SerialNumber: %s\n"+
 			"Date: %d.%d.%d\n"+
 			"The %s instrument stamped that day.\n"+
 			"CUSTOM SHOP Carved top %s\n",
-			serialNumber, date.Year(), date.Month(), date.Day(),  r)
+			serialNumber, date.Year(), date.Month(), date.Day(), r)
 	} else if isEsSeries(serialNumber) {
 		/*
-		ES (Electric Spanish)
-		(A or B)-MYRRR
-		M is the model year being reissued
-		Y is the production year
-		RRR indicates the guitar's place in the sequence of Historic ES production for that year.
-		Reissue model codes:
-		2= ES-295
-		3= 1963 ES-335 (block inlays)
-		4= ES-330
-		5= ES-345
-		9 with an "A" prefix = 1959 ES-335 (dot inlays)
-		9 with a "B" prefix= ES-355
+			ES (Electric Spanish)
+			(A or B)-MYRRR
+			M is the model year being reissued
+			Y is the production year
+			RRR indicates the guitar's place in the sequence of Historic ES production for that year.
+			Reissue model codes:
+			2= ES-295
+			3= 1963 ES-335 (block inlays)
+			4= ES-330
+			5= ES-345
+			9 with an "A" prefix = 1959 ES-335 (dot inlays)
+			9 with a "B" prefix= ES-355
 		*/
 		year := fmt.Sprintf("200%", string(serialNumber[3]))
 		r := convertRankingNumberToText(string(serialNumber[4:]))
 		var model string
 		m := string(serialNumber[2])
-		if (m == "2") {
+		if m == "2" {
 			model = "ES-295"
-		} else if (m == "3") {
+		} else if m == "3" {
 			model = "1963 ES-335 (block inlays)"
-		} else if (m == "4") {
+		} else if m == "4" {
 			model = "ES-330"
-		} else if (m == "5") {
+		} else if m == "5" {
 			model = "ES-345"
-		} else if (m == "9") {
+		} else if m == "9" {
 			h := string(serialNumber[0])
-			if (h == "A") {
+			if h == "A" {
 				model = "1959 ES-335 (dot inlays)"
-			} else if (h == "B") {
+			} else if h == "B" {
 				model = "ES-355"
 			}
 		}
@@ -199,9 +201,9 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		if l == 4 && y == "9" {
 			year = "1989"
 		} else if l == 5 && len(y) == 1 {
-			year = "199" +  y
+			year = "199" + y
 		} else if l == 6 && len(y) == 2 {
-			year = "20" +  y
+			year = "20" + y
 		}
 
 		r := convertRankingNumberToText(string(serialNumber[2:]))
@@ -232,7 +234,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			log.Println(err)
 		}
-		date = date.AddDate(0, 0, di - 1)
+		date = date.AddDate(0, 0, di-1)
 
 		var ppp string
 		if yi <= 2005 && date.Month() == 7 && len(serialNumber) == 9 {
@@ -275,7 +277,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		if pi < 500 && yi <= 1984 {
 			factory = "Kalamazoo"
 		} else if 2000 <= yi &&
-		string(serialNumber[0]) == "A" || string(serialNumber[0]) == "B" {
+			string(serialNumber[0]) == "A" || string(serialNumber[0]) == "B" {
 			factory = "Memphis"
 		} else if yi < 2000 {
 			factory = "Nashville or Memphis"
@@ -304,7 +306,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 	fmt.Println(out)
 }
 
-func convertRankingNumberToText (rrr string) string {
+func convertRankingNumberToText(rrr string) string {
 	ri, err := strconv.Atoi(rrr)
 	if err != nil {
 		log.Println(err)
@@ -361,7 +363,7 @@ func isReguler(serialNumber string) bool {
 		if err != nil {
 			log.Println(err)
 		}
-		date = date.AddDate(0, 0, di - 1)
+		date = date.AddDate(0, 0, di-1)
 		if date.Month() <= 6 && len(serialNumber) == 8 {
 			return true
 		} else if 7 <= date.Month() && len(serialNumber) == 9 {
@@ -476,14 +478,14 @@ func isLesPaulClassic(serialNumber string) bool {
 	return false
 }
 
-func validSerialNumber(serialNumber string) bool{
-	if isLesPaulClassic (serialNumber) {
+func validSerialNumber(serialNumber string) bool {
+	if isLesPaulClassic(serialNumber) {
 		return true
-	} else if isCustomShopReissues50s (serialNumber) {
+	} else if isCustomShopReissues50s(serialNumber) {
 		return true
-	} else if isCustomShopReissues60s (serialNumber) {
+	} else if isCustomShopReissues60s(serialNumber) {
 		return true
-	} else if isCustomShopCarvedTop (serialNumber) {
+	} else if isCustomShopCarvedTop(serialNumber) {
 		return true
 	} else if isCustomShopRegular(serialNumber) {
 		return true
@@ -512,7 +514,7 @@ func Log(handler http.Handler) http.Handler {
 		bufbody := new(bytes.Buffer)
 		bufbody.ReadFrom(req.Body)
 		body := bufbody.String()
-		line := LogLine {
+		line := LogLine{
 			req.RemoteAddr,
 			req.Header.Get("Content-Type"),
 			req.URL.Path,
@@ -530,7 +532,7 @@ func Log(handler http.Handler) http.Handler {
 		}
 
 		logFile := fmt.Sprintf("./log/access/%d%d%d.log", AccessTime.Year(), AccessTime.Month(), AccessTime.Day())
-		f, err := os.OpenFile(logFile, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+		f, err := os.OpenFile(logFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 		if err != nil {
 			panic(err)
 		}
@@ -543,11 +545,19 @@ func Log(handler http.Handler) http.Handler {
 
 func Server() {
 	http.HandleFunc("/", handler)
-	http.ListenAndServe(":8080", Log(http.DefaultServeMux))
+	defaultPort := 80
+	port := defaultPort
+	f := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	f.IntVar(&port, "p", defaultPort, "listen port")
+	f.IntVar(&port, "port", defaultPort, "listen port")
+	f.Parse(os.Args[1:])
+	for 0 < f.NArg() {
+		f.Parse(f.Args()[1:])
+	}
+	addr := fmt.Sprintf(":%d", port)
+	http.ListenAndServe(addr, Log(http.DefaultServeMux))
 }
 
-func main () {
+func main() {
 	Server()
 }
-
-
