@@ -7,11 +7,14 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"regexp"
 	"strconv"
 	"time"
+
+	"golang.org/x/net/netutil"
 )
 
 var (
@@ -531,7 +534,7 @@ func Log(handler http.Handler) http.Handler {
 			panic(err)
 		}
 
-		logFile := fmt.Sprintf("./log/access/%d%d%d.log", AccessTime.Year(), AccessTime.Month(), AccessTime.Day())
+		logFile := fmt.Sprintf("./log/access/%d%02d%02d.log", AccessTime.Year(), AccessTime.Month(), AccessTime.Day())
 		f, err := os.OpenFile(logFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 		if err != nil {
 			panic(err)
@@ -546,16 +549,34 @@ func Log(handler http.Handler) http.Handler {
 func Server() {
 	http.HandleFunc("/", handler)
 	defaultPort := 80
+	defaultLimit := 50
 	port := defaultPort
+	limit := defaultLimit
 	f := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	f.IntVar(&port, "p", defaultPort, "listen port")
 	f.IntVar(&port, "port", defaultPort, "listen port")
+	f.IntVar(&limit, "l", defaultLimit, "server limit")
+	f.IntVar(&limit, "limit", defaultLimit, "server limit")
 	f.Parse(os.Args[1:])
 	for 0 < f.NArg() {
 		f.Parse(f.Args()[1:])
 	}
 	addr := fmt.Sprintf(":%d", port)
-	http.ListenAndServe(addr, Log(http.DefaultServeMux))
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	limit_listener := netutil.LimitListener(listener, limit)
+	defer limit_listener.Close()
+
+	http_config := &http.Server{
+		Handler: Log(http.DefaultServeMux),
+	}
+	err = http_config.Serve(limit_listener)
+	if err != nil {
+		log.Fatalln(err)
+	}
 }
 
 func main() {
