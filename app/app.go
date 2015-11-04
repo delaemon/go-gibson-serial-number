@@ -39,20 +39,7 @@ func Handler(w http.ResponseWriter, req *http.Request) {
 	}
 	log.SetOutput(f)
 
-	var serialNumber string
-
-	if req.Method == "POST" {
-		decorder := json.NewDecoder(req.Body)
-		var rp RequestParams
-		err := decorder.Decode(&rp)
-		if err != nil {
-			log.Println(err)
-		}
-		serialNumber = rp.SerialNumber
-	} else {
-		req.ParseForm()
-		serialNumber = req.Form.Get("serialNumber")
-	}
+	serialNumber := parseSerialNumber(req)
 
 	if !validSerialNumber(serialNumber) {
 		fmt.Fprintf(w, "invalid serial number.")
@@ -473,6 +460,24 @@ func isLesPaulClassic(serialNumber string) bool {
 	}
 
 	return false
+}
+
+func parseSerialNumber(req *http.Request) string {
+	var serialNumber string
+	if req.Method == "POST" {
+		decorder := json.NewDecoder(req.Body)
+		var rp RequestParams
+		err := decorder.Decode(&rp)
+		if err != nil {
+			log.Println(err)
+		}
+		serialNumber = rp.SerialNumber
+	} else {
+		req.ParseForm()
+		serialNumber = req.Form.Get("serialNumber")
+	}
+
+	return serialNumber
 }
 
 func validSerialNumber(serialNumber string) bool {
